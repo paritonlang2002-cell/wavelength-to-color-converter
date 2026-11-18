@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wavelength to Color Converter</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#101827;color:#fff;font-family:Arial,sans-serif}
+.app{width:min(650px,100%);padding:26px;background:#1b2940;border-radius:22px;text-align:center;box-shadow:0 15px 40px #0005}
+h1{color:#70d6ff;margin:0 0 8px}
+p{color:#b8c7dc;line-height:1.5}
+input{width:100%;padding:13px;margin:10px 0;border:1px solid #526782;border-radius:10px;background:#101827;color:white;font-size:18px;text-align:center}
+input[type=range]{padding:0;accent-color:#70d6ff;cursor:pointer}
+.swatch{height:160px;border-radius:15px;margin:20px 0;background:#777;box-shadow:inset 0 0 20px #0002;transition:background .2s}
+.value{font-size:30px;font-weight:bold}
+.hex{font-size:18px;color:#70d6ff;margin-top:5px}
+.details{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.detail{background:#263751;padding:14px;border-radius:12px;color:#b8c7dc}
+.detail strong{display:block;color:#fff;font-size:17px;margin-top:6px}
+.spectrum{height:22px;border-radius:20px;margin-top:25px;background:linear-gradient(to right,#9400d3 0%,#4b0082 19%,#0000ff 31%,#00ff00 51%,#ffff00 65%,#ff7f00 77%,#ff0000 100%)}
+.labels{display:flex;justify-content:space-between;color:#aebed2;font-size:12px;margin-top:8px}
+.bands{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:20px}
+.band{padding:9px 2px;border-radius:8px;font-size:11px;font-weight:bold;color:white}
+.note{font-size:13px;color:#aebed2;margin-top:20px;line-height:1.5}
+@media(max-width:450px){.app{padding:18px}.swatch{height:125px}.band{font-size:9px}}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>🌈 VIBGYOR Spectrum</h1>
+<p>Enter a wavelength in nanometres and explore its corresponding visible colour.</p>
+
+<input type="number" id="number" min="100" max="2000" value="550">
+<input type="range" id="slider" min="380" max="750" value="550">
+
+<div class="swatch" id="swatch"></div>
+<div class="value" id="colorName">Green</div>
+<div class="hex" id="hex">#00FF00</div>
+
+<div class="details">
+<div class="detail">Wavelength<strong id="wave">550 nm</strong></div>
+<div class="detail">Frequency<strong id="frequency">545.1 THz</strong></div>
+</div>
+
+<div class="spectrum"></div>
+<div class="labels"><span>380 nm</span><span>Visible spectrum</span><span>750 nm</span></div>
+
+<div class="bands">
+<div class="band" style="background:#9400d3">Violet</div>
+<div class="band" style="background:#4b0082">Indigo</div>
+<div class="band" style="background:#0000cc">Blue</div>
+<div class="band" style="background:#008000">Green</div>
+<div class="band" style="background:#b5a000">Yellow</div>
+<div class="band" style="background:#d66b00">Orange</div>
+<div class="band" style="background:#cc0000">Red</div>
+</div>
+
+<div class="note" id="note">
+Visible light occupies approximately 380–750 nm. Select a wavelength to explore its colour and frequency.
+</div>
+</div>
+
+<script>
+const number=document.getElementById("number");
+const slider=document.getElementById("slider");
+const swatch=document.getElementById("swatch");
+const colorName=document.getElementById("colorName");
+const hexText=document.getElementById("hex");
+const waveText=document.getElementById("wave");
+const frequencyText=document.getElementById("frequency");
+const note=document.getElementById("note");
+
+function getName(w){
+ if(w<450)return "Violet";
+ if(w<475)return "Indigo";
+ if(w<495)return "Blue";
+ if(w<570)return "Green";
+ if(w<590)return "Yellow";
+ if(w<620)return "Orange";
+ return "Red";
+}
+
+// Approximate wavelength-to-RGB conversion
+function wavelengthColor(w){
+ let r=0,g=0,b=0;
+
+ if(w>=380&&w<440){
+  r=-(w-440)/60;
+  b=1;
+ }else if(w<490){
+  g=(w-440)/50;
+  b=1;
+ }else if(w<510){
+  g=1;
+  b=-(w-510)/20;
+ }else if(w<580){
+  r=(w-510)/70;
+  g=1;
+ }else if(w<645){
+  r=1;
+  g=-(w-645)/65;
+ }else{
+  r=1;
+ }
+
+ let factor=1;
+ if(w<420)factor=0.3+0.7*(w-380)/40;
+ else if(w>700)factor=0.3+0.7*(750-w)/50;
+
+ const convert=c=>Math.round(255*Math.pow(Math.max(0,c*factor),0.8));
+ return [convert(r),convert(g),convert(b)];
+}
+
+function update(){
+ let w=Number(number.value);
+
+ if(!Number.isFinite(w)||number.value==="")return;
+
+ waveText.textContent=w+" nm";
+ frequencyText.textContent=w>0?(299792.458/w).toFixed(2)+" THz":"—";
+
+ if(w<380||w>750){
+  swatch.style.background="#263751";
+  colorName.textContent=w<380?"Ultraviolet":"Infrared";
+  hexText.textContent="Outside visible spectrum";
+  note.textContent="This wavelength is outside the approximate visible spectrum and cannot be represented by a visible spectral colour.";
+  return;
+ }
+
+ slider.value=w;
+
+ const [r,g,b]=wavelengthColor(w);
+ const hex="#"+[r,g,b].map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();
+
+ swatch.style.background=hex;
+ colorName.textContent=getName(w);
+ hexText.textContent=hex;
+
+ note.textContent=`${getName(w)} light: approximately ${w} nm. Colour boundaries are gradual, so the VIBGYOR ranges are approximate.`;
+}
+
+number.addEventListener("input",update);
+
+slider.addEventListener("input",()=>{
+ number.value=slider.value;
+ update();
+});
+
+update();
+</script>
+</body>
+</html>
